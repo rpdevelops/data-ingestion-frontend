@@ -154,6 +154,7 @@ export async function verifyToken(token: string) {
 
 /**
  * Get current user from JWT token stored in cookies
+ * Returns user info including groups/roles from Cognito
  */
 export async function getCurrentUser() {
   try {
@@ -170,6 +171,14 @@ export async function getCurrentUser() {
       return null;
     }
 
+    // Extract groups/roles from access token
+    // Cognito Groups are the correct way to implement user authorization/roles
+    // Groups appear as 'cognito:groups' in the access token
+    // Note: This is different from IAM roles (which are for AWS resource access)
+    // IAM roles are used by backend services, not for user authorization
+    const groups = (payload as any)['cognito:groups'] || [];
+    const roles = groups; // Groups are used as roles/authorization in Cognito
+
     // Decode ID token to get user information
     if (idToken) {
       try {
@@ -181,6 +190,8 @@ export async function getCurrentUser() {
           email: idTokenPayload.email || payload.username,
           username: payload.username,
           tokenUse: payload.token_use,
+          roles: roles as string[],
+          groups: groups as string[],
         };
       } catch {
         // If ID token decode fails, return basic info from access token
@@ -188,6 +199,8 @@ export async function getCurrentUser() {
           sub: payload.sub,
           username: payload.username,
           tokenUse: payload.token_use,
+          roles: roles as string[],
+          groups: groups as string[],
         };
       }
     }
@@ -196,10 +209,55 @@ export async function getCurrentUser() {
       sub: payload.sub,
       username: payload.username,
       tokenUse: payload.token_use,
+      roles: roles as string[],
+      groups: groups as string[],
     };
   } catch (error) {
     return null;
   }
+}
+
+/**
+ * Get the allowed group from environment variable
+ * Defaults to "uploader" if not set
+ */
+export function getAllowedGroup(): string {
+  return process.env.ALLOWED_GROUP || "uploader";
+}
+
+/**
+ * Check if user has the allowed role (group) from environment variable
+ * 
+ * This checks Cognito Groups, which is the correct way to implement
+ * user authorization in Cognito. Groups appear in JWT as 'cognito:groups'.
+ * 
+ * Note: This is NOT checking IAM roles. IAM roles are for AWS resource
+ * access (used by backend services), not for user authorization.
+ */
+export async function hasAllowedRole(): Promise<boolean> {
+  const allowedGroup = getAllowedGroup();
+  const user = await getCurrentUser();
+  if (!user || !user.roles) {
+    return false;
+  }
+  return user.roles.includes(allowedGroup);
+}
+
+/**
+ * Check if user has a specific role (group)
+ * 
+ * This checks Cognito Groups, which is the correct way to implement
+ * user authorization in Cognito. Groups appear in JWT as 'cognito:groups'.
+ * 
+ * Note: This is NOT checking IAM roles. IAM roles are for AWS resource
+ * access (used by backend services), not for user authorization.
+ */
+export async function hasRole(requiredRole: string): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user || !user.roles) {
+    return false;
+  }
+  return user.roles.includes(requiredRole);
 }
 
 /**

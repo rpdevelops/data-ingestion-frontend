@@ -2,7 +2,21 @@ import { LoginForm } from "@/components/login-form";
 import Link from "next/link";
 import { Database } from "lucide-react";
 
-export default function Page() {
+export default function Page({
+  searchParams,
+}: {
+  searchParams: { error?: string; required?: string };
+}) {
+  const getErrorMessage = () => {
+    if (searchParams?.error === "unauthorized") {
+      const requiredGroup = searchParams?.required || "uploader";
+      return `You don't have permission to access this area. Required group: ${requiredGroup}. Please contact an administrator.`;
+    }
+    return null;
+  };
+
+  const errorMessage = getErrorMessage();
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-gradient-to-b from-white via-blue-50/30 to-white">
       <div className="w-full max-w-sm">
@@ -19,6 +33,12 @@ export default function Page() {
             </div>
           </Link>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
 
         <LoginForm />
       </div>

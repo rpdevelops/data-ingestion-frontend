@@ -58,7 +58,14 @@ export function NavUser({
               </Avatar>
               {!collapsed && (
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{user.name}</span>
+                    {user.role && (
+                      <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded border border-blue-200">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-muted-foreground truncate text-xs">
                     {user.email}
                   </span>
@@ -88,7 +95,14 @@ export function NavUser({
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{user.name}</span>
+                    {user.role && (
+                      <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded border border-blue-200">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-muted-foreground truncate text-xs">
                     {user.email}
                   </span>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/cognito";
+import { getCurrentUser, hasAllowedRole, getAllowedGroup } from "@/lib/auth/cognito";
 import { SidebarCollapseProvider } from "@/components/ui/sidebar-collapse-context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -18,12 +18,25 @@ export default async function AreaClienteLayout({
     redirect("/auth/login");
   }
 
+  // Check if user has required role from environment variable
+  const hasRequiredRole = await hasAllowedRole();
+  
+  if (!hasRequiredRole) {
+    const allowedGroup = getAllowedGroup();
+    redirect(`/auth/login?error=unauthorized&required=${allowedGroup}`);
+  }
+
+  // Get primary role (first role or default)
+  const primaryRole = cognitoUser.roles && cognitoUser.roles.length > 0 
+    ? cognitoUser.roles[0] 
+    : "user";
+
   // Create basic sidebarUser from Cognito
   const sidebarUser: SidebarUser = {
     name: cognitoUser.email.split("@")[0], // Use email part as temporary name
     email: cognitoUser.email,
     avatar: "",
-    role: "tenant", // Assuming tenant for now
+    role: primaryRole,
     createdAt: new Date().toISOString(),
   };
 

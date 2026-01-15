@@ -124,6 +124,9 @@ data-ingestion-frontend/
    COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
    COGNITO_REGION=us-east-1
    
+   # Authorization (optional - defaults to "uploader")
+   ALLOWED_GROUP=uploader
+   
    # API Configuration
    NEXT_PUBLIC_API_URL=http://localhost:8000
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
