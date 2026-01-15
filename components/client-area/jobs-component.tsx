@@ -72,7 +72,7 @@ export const columns: ColumnDef<Job>[] = [
     accessorKey: "job_id",
     header: "ID",
     cell: ({ row }) => {
-      return <div className="font-medium">{row.getValue("job_id")}</div>;
+      return <div className="font-medium text-center">{row.getValue("job_id")}</div>;
     },
   },
   {
@@ -80,7 +80,7 @@ export const columns: ColumnDef<Job>[] = [
     header: "Filename",
     cell: ({ row }) => {
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <IconFileText className="h-4 w-4 text-muted-foreground" />
           <span className="max-w-[200px] truncate" title={row.getValue("job_original_filename")}>
             {row.getValue("job_original_filename")}
@@ -96,10 +96,12 @@ export const columns: ColumnDef<Job>[] = [
       const status = row.getValue("job_status") as JobStatus;
       const { variant, icon } = getStatusBadge(status);
       return (
-        <Badge variant={variant} className="flex items-center gap-1 w-fit">
-          {icon}
-          {formatStatus(status)}
-        </Badge>
+        <div className="flex justify-center">
+          <Badge variant={variant} className="flex items-center gap-1 w-fit">
+            {icon}
+            {formatStatus(status)}
+          </Badge>
+        </div>
       );
     },
   },
@@ -107,7 +109,7 @@ export const columns: ColumnDef<Job>[] = [
     accessorKey: "job_total_rows",
     header: "Total Rows",
     cell: ({ row }) => {
-      return <div className="text-right">{row.getValue("job_total_rows")}</div>;
+      return <div className="text-center">{row.getValue("job_total_rows")}</div>;
     },
   },
   {
@@ -118,7 +120,7 @@ export const columns: ColumnDef<Job>[] = [
       const total = row.original.job_total_rows;
       const progress = calculateProgress(processed, total);
       return (
-        <div className="text-right">
+        <div className="text-center">
           <div className="font-medium">{processed} / {total}</div>
           <div className="text-xs text-muted-foreground">{progress}%</div>
         </div>
@@ -131,9 +133,9 @@ export const columns: ColumnDef<Job>[] = [
     cell: ({ row }) => {
       const count = row.getValue("job_issue_count") as number;
       return (
-        <div className="text-right">
+        <div className="flex justify-center">
           {count > 0 ? (
-            <Badge variant="secondary" className="flex items-center gap-1 w-fit ml-auto">
+            <Badge variant="secondary" className="flex items-center gap-1 w-fit">
               <IconAlertCircle className="h-3 w-3" />
               {count}
             </Badge>
@@ -148,21 +150,21 @@ export const columns: ColumnDef<Job>[] = [
     accessorKey: "job_created_at",
     header: "Created At",
     cell: ({ row }) => {
-      return <div>{formatDate(row.getValue("job_created_at"))}</div>;
+      return <div className="text-center">{formatDate(row.getValue("job_created_at"))}</div>;
     },
   },
   {
     accessorKey: "job_process_start",
     header: "Process Start",
     cell: ({ row }) => {
-      return <div>{formatDate(row.getValue("job_process_start"))}</div>;
+      return <div className="text-center">{formatDate(row.getValue("job_process_start"))}</div>;
     },
   },
   {
     accessorKey: "job_process_end",
     header: "Process End",
     cell: ({ row }) => {
-      return <div>{formatDate(row.getValue("job_process_end"))}</div>;
+      return <div className="text-center">{formatDate(row.getValue("job_process_end"))}</div>;
     },
   },
   {
@@ -173,14 +175,14 @@ export const columns: ColumnDef<Job>[] = [
         row.original.job_process_start,
         row.original.job_process_end
       );
-      return <div>{duration}</div>;
+      return <div className="text-center">{duration}</div>;
     },
   },
   {
     accessorKey: "job_user_id",
     header: "User ID",
     cell: ({ row }) => {
-      return <div className="font-mono text-sm">{row.getValue("job_user_id")}</div>;
+      return <div className="font-mono text-sm text-center">{row.getValue("job_user_id")}</div>;
     },
   },
 ];

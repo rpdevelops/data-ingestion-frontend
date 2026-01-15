@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/lib/auth/cognito";
 import { redirect } from "next/navigation";
 import { JobsComponent } from "@/components/client-area/jobs-component";
+import { fetchJobs } from "@/lib/api/jobs";
+import { Job } from "@/types/job";
 
 export default async function ProcessingJobsPage() {
   const user = await getCurrentUser();
@@ -9,9 +11,17 @@ export default async function ProcessingJobsPage() {
     redirect("/auth/login");
   }
 
-  // TODO: Fetch jobs from backend API
-  // For now, using empty array - will be populated via API
-  const jobs: never[] = [];
+  // Fetch jobs from backend API
+  let jobs: Job[] | undefined = [];
+  let error: string | null = null;
+
+  try {
+    const response = await fetchJobs();
+    jobs = response.jobs;
+  } catch (err) {
+    console.error("Error fetching jobs:", err);
+    error = err instanceof Error ? err.message : "Failed to load jobs";
+  }
 
   return (
     <div className="space-y-6 px-5">
@@ -22,6 +32,15 @@ export default async function ProcessingJobsPage() {
           View and manage your data processing jobs
         </p>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">
+            <strong>Error loading jobs:</strong> {error}
+          </p>
+        </div>
+      )}
 
       {/* Jobs Table */}
       <JobsComponent jobs={jobs} />

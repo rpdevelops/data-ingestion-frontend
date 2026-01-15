@@ -317,3 +317,12 @@ export async function getAccessToken(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get("cognito_access_token")?.value || null;
 }
+
+/**
+ * Get ID token from cookies
+ * The ID token contains the "aud" claim required by the backend
+ */
+export async function getIdToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get("cognito_id_token")?.value || null;
+}
