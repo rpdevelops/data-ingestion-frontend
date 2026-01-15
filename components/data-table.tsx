@@ -384,6 +384,13 @@ export function DataTable<TData>({
   filters = []
 }: DataTableProps<TData>) {
   const [tableData, setTableData] = React.useState(data);
+  
+  // Update tableData when data prop changes (for polling/real-time updates)
+  React.useEffect(() => {
+    // Always update when data prop changes (React will handle re-renders efficiently)
+    setTableData(data);
+  }, [data]);
+  
   const dataIds = tableData.map((item, idx) =>
     typeof item === "object" && item !== null && "id" in item ? (item as { id: string | number }).id : idx
   );

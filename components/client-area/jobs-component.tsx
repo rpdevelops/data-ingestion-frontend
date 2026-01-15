@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable, FilterConfig } from "@/components/data-table";
 import { Job, JobStatus } from "@/types/job";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { IconFileText, IconClock, IconCheck, IconX, IconAlertCircle } from "@tabler/icons-react";
+import { getJobs } from "@/actions/jobs";
+import { toast } from "sonner";
 
 // Helper function to format date
 function formatDate(dateString: string | null): string {
@@ -17,14 +20,38 @@ function formatDate(dateString: string | null): string {
   }
 }
 
-// Helper function to get status badge variant
+// Helper function to get status badge variant with semantic colors
 function getStatusBadge(status: JobStatus) {
-  const variants: Record<JobStatus, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
-    PENDING: { variant: "outline", icon: <IconClock className="h-3 w-3" /> },
-    PROCESSING: { variant: "default", icon: <IconClock className="h-3 w-3" /> },
-    NEEDS_REVIEW: { variant: "secondary", icon: <IconAlertCircle className="h-3 w-3" /> },
-    COMPLETED: { variant: "default", icon: <IconCheck className="h-3 w-3" /> },
-    FAILED: { variant: "destructive", icon: <IconX className="h-3 w-3" /> },
+  const variants: Record<JobStatus, { 
+    variant: "default" | "secondary" | "destructive" | "outline"; 
+    icon: React.ReactNode;
+    className: string;
+  }> = {
+    PENDING: { 
+      variant: "outline", 
+      icon: <IconClock className="h-3 w-3" />,
+      className: "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100"
+    },
+    PROCESSING: { 
+      variant: "default", 
+      icon: <IconClock className="h-3 w-3" />,
+      className: "border-blue-500 text-blue-700 bg-blue-50 hover:bg-blue-100"
+    },
+    NEEDS_REVIEW: { 
+      variant: "secondary", 
+      icon: <IconAlertCircle className="h-3 w-3" />,
+      className: "border-orange-500 text-orange-700 bg-orange-50 hover:bg-orange-100"
+    },
+    COMPLETED: { 
+      variant: "default", 
+      icon: <IconCheck className="h-3 w-3" />,
+      className: "border-green-500 text-green-700 bg-green-50 hover:bg-green-100"
+    },
+    FAILED: { 
+      variant: "destructive", 
+      icon: <IconX className="h-3 w-3" />,
+      className: "border-red-500 text-red-700 bg-red-50 hover:bg-red-100"
+    },
   };
   return variants[status] || variants.PENDING;
 }
@@ -94,10 +121,10 @@ export const columns: ColumnDef<Job>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("job_status") as JobStatus;
-      const { variant, icon } = getStatusBadge(status);
+      const { variant, icon, className } = getStatusBadge(status);
       return (
         <div className="flex justify-center">
-          <Badge variant={variant} className="flex items-center gap-1 w-fit">
+          <Badge variant={variant} className={`flex items-center gap-1 w-fit border ${className}`}>
             {icon}
             {formatStatus(status)}
           </Badge>
@@ -224,10 +251,81 @@ const filterConfigs: FilterConfig[] = [
 ];
 
 interface JobsComponentProps {
-  jobs?: Job[];
+  initialJobs?: Job[];
 }
 
-export function JobsComponent({ jobs = [] }: JobsComponentProps) {
+// Polling interval in milliseconds (5 seconds)
+const POLLING_INTERVAL = 5000;
+
+export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
+  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [isPolling, setIsPolling] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const errorCountRef = useRef(0);
+
+  const fetchJobsData = useCallback(async () => {
+    try {
+      const response = await getJobs();
+      console.log("Polling: Fetched jobs", response.jobs.length, "jobs");
+      setJobs(response.jobs);
+      setLastUpdate(new Date());
+      // Reset error count on successful fetch
+      if (errorCountRef.current > 0) {
+        errorCountRef.current = 0;
+      }
+    } catch (error) {
+      console.error("Error fetching jobs during polling:", error);
+      errorCountRef.current += 1;
+      const currentErrorCount = errorCountRef.current;
+      
+      // Only show toast on first error or every 5 errors to avoid spam
+      if (currentErrorCount === 1 || currentErrorCount % 5 === 0) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load jobs";
+        toast.error("Failed to refresh jobs", {
+          description: errorMessage.includes("Authentication") 
+            ? "Please refresh the page and log in again."
+            : "The table will continue trying to refresh automatically.",
+          duration: 4000,
+        });
+      }
+      
+      // Don't stop polling on error, just log it
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial fetch to ensure we have the latest data
+    fetchJobsData();
+
+    // Set up polling interval
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isPolling) {
+      intervalId = setInterval(() => {
+        fetchJobsData();
+      }, POLLING_INTERVAL);
+    }
+
+    // Cleanup interval on unmount or when polling stops
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isPolling, fetchJobsData]);
+
+  // Check if there are any jobs with status that might change (PENDING, PROCESSING)
+  const hasActiveJobs = jobs.some(
+    (job) => job.job_status === "PENDING" || job.job_status === "PROCESSING"
+  );
+
+  // Auto-enable polling if there are active jobs
+  useEffect(() => {
+    if (hasActiveJobs && !isPolling) {
+      setIsPolling(true);
+    }
+  }, [hasActiveJobs, isPolling]);
+
   return (
     <div className="space-y-4">
       <DataTable

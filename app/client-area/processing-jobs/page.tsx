@@ -1,7 +1,8 @@
 import { getCurrentUser } from "@/lib/auth/cognito";
 import { redirect } from "next/navigation";
 import { JobsComponent } from "@/components/client-area/jobs-component";
-import { fetchJobs } from "@/lib/api/jobs";
+import { getJobs } from "@/actions/jobs";
+import { UploadCSVButton } from "@/components/client-area/upload-csv-button";
 import { Job } from "@/types/job";
 
 export default async function ProcessingJobsPage() {
@@ -11,12 +12,12 @@ export default async function ProcessingJobsPage() {
     redirect("/auth/login");
   }
 
-  // Fetch jobs from backend API
-  let jobs: Job[] | undefined = [];
+  // Fetch jobs from backend API using Server Action
+  let jobs: Job[] = [];
   let error: string | null = null;
 
   try {
-    const response = await fetchJobs();
+    const response = await getJobs();
     jobs = response.jobs;
   } catch (err) {
     console.error("Error fetching jobs:", err);
@@ -42,8 +43,13 @@ export default async function ProcessingJobsPage() {
         </div>
       )}
 
-      {/* Jobs Table */}
-      <JobsComponent jobs={jobs} />
+      {/* Upload Button and Jobs Table */}
+      <div className="space-y-4">
+        <div className="flex justify-start">
+          <UploadCSVButton />
+        </div>
+        <JobsComponent initialJobs={jobs} />
+      </div>
     </div>
   );
 }
