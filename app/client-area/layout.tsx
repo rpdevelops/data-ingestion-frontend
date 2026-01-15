@@ -26,17 +26,18 @@ export default async function AreaClienteLayout({
     redirect(`/auth/login?error=unauthorized&required=${allowedGroup}`);
   }
 
-  // Get primary role (first role or default)
+  // Get primary role (first role or default) for backward compatibility
   const primaryRole = cognitoUser.roles && cognitoUser.roles.length > 0 
     ? cognitoUser.roles[0] 
     : "user";
 
-  // Create basic sidebarUser from Cognito
+  // Create basic sidebarUser from Cognito with all roles
   const sidebarUser: SidebarUser = {
     name: cognitoUser.email.split("@")[0], // Use email part as temporary name
     email: cognitoUser.email,
     avatar: "",
-    role: primaryRole,
+    role: primaryRole, // Keep for backward compatibility
+    roles: cognitoUser.roles || [], // All roles/groups
     createdAt: new Date().toISOString(),
   };
 

@@ -4,4 +4,5 @@ export interface SidebarUser {
     avatar: string;
     role: string;
     createdAt: string;
+    roles?: string[]; // All user roles/groups from Cognito
   }
