@@ -23,6 +23,8 @@ import {
   IconHistory,
   IconBrandWhatsapp,
   IconMessage,
+  IconReceipt,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
@@ -62,6 +64,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; size?: n
   IconHistory,
   IconBrandWhatsapp,
   IconMessage,
+  IconReceipt,
+  IconAlertCircle,
 };
 
 // Interface para os itens do menu

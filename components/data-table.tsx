@@ -571,6 +571,13 @@ export function DataTable<TData>({
           return cellValueStr === filterValueStr;
         }
         
+        // Para campos booleanos (como issue_resolved)
+        if (filter.field === 'issue_resolved') {
+          const cellBool = String(cellValue) === 'true' || cellValue === true;
+          const filterBool = filterValueStr === 'true';
+          return cellBool === filterBool;
+        }
+        
         return cellValueStr.includes(filterValueStr);
       });
     });

@@ -44,6 +44,7 @@ export default async function AreaClienteLayout({
   const clienteNavMain = [
     { title: "Home", url: "/client-area", icon: "IconHome" },
     { title: "Processing Jobs", url: "/client-area/processing-jobs", icon: "IconReceipt" },
+    { title: "Issues", url: "/client-area/issues", icon: "IconAlertCircle" },
   ];
 
   // const clienteNavSecondary = [

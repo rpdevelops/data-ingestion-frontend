@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { IconFileText, IconClock, IconCheck, IconX, IconAlertCircle } from "@tabler/icons-react";
 import { getJobs } from "@/actions/jobs";
 import { toast } from "sonner";
+import Link from "next/link";
 
 // Helper function to format date
 function formatDate(dateString: string | null): string {
@@ -159,13 +160,19 @@ export const columns: ColumnDef<Job>[] = [
     header: "Issues",
     cell: ({ row }) => {
       const count = row.getValue("job_issue_count") as number;
+      const jobId = row.original.job_id;
       return (
         <div className="flex justify-center">
           {count > 0 ? (
-            <Badge variant="secondary" className="flex items-center gap-1 w-fit">
-              <IconAlertCircle className="h-3 w-3" />
-              {count}
-            </Badge>
+            <Link
+              href={`/client-area/jobs/${jobId}/issues`}
+              className="cursor-pointer"
+            >
+              <Badge variant="destructive" className="flex items-center gap-1 w-fit hover:bg-destructive/90 transition-colors">
+                <IconAlertCircle className="h-3 w-3" />
+                {count}
+              </Badge>
+            </Link>
           ) : (
             <span className="text-muted-foreground">-</span>
           )}
