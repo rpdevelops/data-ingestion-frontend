@@ -24,7 +24,7 @@ export function LogoutButton() {
       className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-cyan-700 hover:to-blue-700 text-white"
     >
       <IconLogout />
-      <p>Sair</p>
+      <p>Logout</p>
     </Button>
   );
 }

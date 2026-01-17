@@ -834,13 +834,13 @@ export function DataTable<TData>({
               {/* Controles da tabela */}
               <div className="flex items-center gap-2">
                 <Label htmlFor="columns-customize" className="sr-only">
-                  Personalizar Colunas
+                  Customize Columns
                 </Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
                       <IconLayoutColumns />
-                      <span className="hidden lg:inline">Personalizar Colunas</span>
+                      <span className="hidden lg:inline">Customize Columns</span>
                       <span className="lg:hidden">Colunas</span>
                       <IconChevronDown />
                     </Button>
@@ -879,7 +879,7 @@ export function DataTable<TData>({
                   onClick={() => exportTableToCSV(columns, table)}
                 >
                   <IconDownload />
-                  <span className="hidden lg:inline">Exportar CSV</span>
+                  <span className="hidden lg:inline">Export CSV</span>
                 </Button>
               </div>
             </div>

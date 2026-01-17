@@ -373,6 +373,77 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     }
   };
 
+  const handleReprocessAllJobs = async () => {
+    // Extract unique job IDs from all resolved issues
+    const uniqueJobIds = Array.from(
+      new Set(
+        issues
+          .filter(issue => issue.issue_resolved)
+          .map(issue => issue.issues_job_id)
+      )
+    );
+
+    if (uniqueJobIds.length === 0) {
+      toast.error("No jobs to reprocess", {
+        description: "No resolved issues found with associated jobs.",
+      });
+      return;
+    }
+
+    setIsReprocessing(true);
+    const totalJobs = uniqueJobIds.length;
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    try {
+      // Process jobs sequentially to avoid overwhelming the API
+      for (let i = 0; i < uniqueJobIds.length; i++) {
+        const jobId = uniqueJobIds[i];
+        try {
+          await reprocessJob(jobId);
+          successCount++;
+          toast.success(`Job ${jobId} queued for reprocessing`, {
+            description: `Processing ${i + 1}/${totalJobs} jobs...`,
+            duration: 2000,
+          });
+        } catch (error) {
+          errorCount++;
+          const errorMessage = error instanceof Error ? error.message : `Failed to reprocess job ${jobId}`;
+          errors.push(`Job ${jobId}: ${errorMessage}`);
+          toast.error(`Error reprocessing job ${jobId}`, {
+            description: errorMessage,
+            duration: 3000,
+          });
+        }
+      }
+
+      // Final summary toast
+      if (errorCount === 0) {
+        toast.success("All jobs queued for reprocessing", {
+          description: `Successfully queued ${successCount} job(s) for reprocessing.`,
+          duration: 4000,
+        });
+      } else {
+        toast.warning("Some jobs failed to reprocess", {
+          description: `Successfully queued ${successCount} job(s), but ${errorCount} job(s) failed.`,
+          duration: 5000,
+        });
+      }
+
+      // Redirect to processing jobs page after a delay
+      setTimeout(() => {
+        router.push("/client-area/processing-jobs");
+      }, 2000);
+    } catch (error) {
+      console.error("Error during batch reprocessing:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to reprocess jobs";
+      toast.error("Error reprocessing jobs", { description: errorMessage });
+    } finally {
+      setIsReprocessing(false);
+    }
+  };
+
   // Check if all issues are resolved
   const allIssuesResolved = stats.total > 0 && stats.unresolved === 0 && stats.resolved === stats.total;
 
@@ -394,27 +465,50 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         </div>
       </div>
 
-      {/* Reprocess Button - Only show when all issues are resolved and jobId is provided */}
-      {allIssuesResolved && jobId && (
+      {/* Reprocess Button - Only show when all issues are resolved */}
+      {allIssuesResolved && (
         <div className="flex justify-center">
-          <Button
-            onClick={handleReprocess}
-            disabled={isReprocessing}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md"
-            size="lg"
-          >
-            {isReprocessing ? (
-              <>
-                <IconRefresh className="h-5 w-5 mr-2 animate-spin" />
-                Reprocessing...
-              </>
-            ) : (
-              <>
-                <IconRefresh className="h-5 w-5 mr-2" />
-                Reprocess Job
-              </>
-            )}
-          </Button>
+          {jobId ? (
+            // Single job reprocess button
+            <Button
+              onClick={handleReprocess}
+              disabled={isReprocessing}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md"
+              size="lg"
+            >
+              {isReprocessing ? (
+                <>
+                  <IconRefresh className="h-5 w-5 mr-2 animate-spin" />
+                  Reprocessing...
+                </>
+              ) : (
+                <>
+                  <IconRefresh className="h-5 w-5 mr-2" />
+                  Reprocess Job
+                </>
+              )}
+            </Button>
+          ) : (
+            // Reprocess all jobs button (only on all issues page)
+            <Button
+              onClick={handleReprocessAllJobs}
+              disabled={isReprocessing}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md"
+              size="lg"
+            >
+              {isReprocessing ? (
+                <>
+                  <IconRefresh className="h-5 w-5 mr-2 animate-spin" />
+                  Reprocessing All Jobs...
+                </>
+              ) : (
+                <>
+                  <IconRefresh className="h-5 w-5 mr-2" />
+                  Reprocess All Jobs
+                </>
+              )}
+            </Button>
+          )}
         </div>
       )}
 
