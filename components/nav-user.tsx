@@ -128,26 +128,6 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`${homeUrl}/minha-conta`}
-                  className="flex items-center gap-2"
-                >
-                  <IconUserCircle />
-                  <span>Minha Conta</span>
-                </Link>
-              </DropdownMenuItem>
-              {/* <DropdownMenuItem>
-                <IconCreditCard />
-                Financeiro
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification />
-                Notificações
-              </DropdownMenuItem> */}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <LogoutButton />
             </DropdownMenuItem>

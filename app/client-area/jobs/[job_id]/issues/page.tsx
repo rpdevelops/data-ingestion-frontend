@@ -5,11 +5,12 @@ import { getIssuesByJobId } from "@/actions/issues";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Issue } from "@/types/issue";
 
 export default async function JobIssuesPage({
   params,
 }: {
-  params: { job_id: string };
+  params: Promise<{ job_id: string }>;
 }) {
   const user = await getCurrentUser();
 
@@ -17,15 +18,18 @@ export default async function JobIssuesPage({
     redirect("/auth/login");
   }
 
+  // Await params before accessing properties (Next.js 15 requirement)
+  const { job_id } = await params;
+  
   // Parse job_id from params
-  const jobId = parseInt(params.job_id, 10);
+  const jobId = parseInt(job_id, 10);
 
   if (isNaN(jobId)) {
     notFound();
   }
 
   // Fetch issues for this specific job using Server Action
-  let issues = [];
+  let issues: Issue[] | undefined = [];
   let error: string | null = null;
 
   try {

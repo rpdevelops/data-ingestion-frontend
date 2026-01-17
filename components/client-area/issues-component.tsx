@@ -6,10 +6,14 @@ import { DataTable, FilterConfig } from "@/components/data-table";
 import { Issue, IssueType } from "@/types/issue";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { IconAlertCircle, IconCheck, IconX, IconMail, IconFileAlert, IconUserPlus, IconHash } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconX, IconMail, IconFileAlert, IconUserPlus, IconHash, IconRefresh } from "@tabler/icons-react";
 import { getIssues, getIssuesByJobId } from "@/actions/issues";
+import { reprocessJob } from "@/actions/jobs";
 import { toast } from "sonner";
 import Link from "next/link";
+import { ResolveIssueModal } from "./resolve-issue-modal";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 // Helper function to format date
 function formatDate(dateString: string | null): string {
@@ -164,7 +168,7 @@ export const columns: ColumnDef<Issue>[] = [
     cell: ({ row }) => {
       const affectedRows = row.original.affected_rows || [];
       return (
-        <div className="text-center">
+        <div className="text-center flex justify-center">
           <Badge variant="secondary" className="flex items-center gap-1 w-fit">
             <IconHash className="h-3 w-3" />
             {affectedRows.length}
@@ -260,6 +264,10 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     unresolved: 0,
   });
   const errorCountRef = useRef(0);
+  const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReprocessing, setIsReprocessing] = useState(false);
+  const router = useRouter();
 
   const fetchIssuesData = useCallback(async () => {
     try {
@@ -326,6 +334,48 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     }
   }, [hasUnresolvedIssues, isPolling]);
 
+  const handleRowClick = (row: any) => {
+    const issue = row.original as Issue;
+    // Only open modal if issue is not resolved
+    if (!issue.issue_resolved && issue.affected_rows && issue.affected_rows.length > 0) {
+      setSelectedIssueId(issue.issue_id);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedIssueId(null);
+    // Refresh issues after resolving
+    fetchIssuesData();
+  };
+
+  const handleReprocess = async () => {
+    if (!jobId) return;
+
+    setIsReprocessing(true);
+    try {
+      await reprocessJob(jobId);
+      toast.success("Job queued for reprocessing", {
+        description: `Job ${jobId} has been sent to the reprocessing queue.`,
+        duration: 3000,
+      });
+      
+      // Redirect to processing jobs page after a short delay
+      setTimeout(() => {
+        router.push("/client-area/processing-jobs");
+      }, 1500);
+    } catch (error) {
+      console.error("Error reprocessing job:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to reprocess job";
+      toast.error("Error reprocessing job", { description: errorMessage });
+      setIsReprocessing(false);
+    }
+  };
+
+  // Check if all issues are resolved
+  const allIssuesResolved = stats.total > 0 && stats.unresolved === 0 && stats.resolved === stats.total;
+
   return (
     <div className="space-y-4">
       {/* Statistics Cards */}
@@ -344,6 +394,30 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         </div>
       </div>
 
+      {/* Reprocess Button - Only show when all issues are resolved and jobId is provided */}
+      {allIssuesResolved && jobId && (
+        <div className="flex justify-center">
+          <Button
+            onClick={handleReprocess}
+            disabled={isReprocessing}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-md"
+            size="lg"
+          >
+            {isReprocessing ? (
+              <>
+                <IconRefresh className="h-5 w-5 mr-2 animate-spin" />
+                Reprocessing...
+              </>
+            ) : (
+              <>
+                <IconRefresh className="h-5 w-5 mr-2" />
+                Reprocess Job
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Issues Table */}
       <DataTable
         columns={columns}
@@ -351,6 +425,7 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         searchFields={["issue_description", "issue_resolved_by", "issues_job_id"]}
         searchPlaceholder="Search issues by description, resolved by, or job ID..."
         filters={filterConfigs.filter(filter => jobId ? filter.field !== "issues_job_id" : true)}
+        onRowClick={handleRowClick}
         initialVisibleColumns={
           jobId
             ? [
@@ -361,6 +436,7 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
                 "affected_rows_count",
                 "issue_created_at",
                 "issue_resolved_at",
+                "issue_resolved_by"
               ]
             : [
                 "issue_id",
@@ -374,6 +450,16 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
               ]
         }
       />
+
+      {/* Resolve Issue Modal */}
+      {selectedIssueId && (
+        <ResolveIssueModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          issueId={selectedIssueId}
+          onResolved={handleModalClose}
+        />
+      )}
     </div>
   );
 }

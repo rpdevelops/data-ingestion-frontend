@@ -1,15 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable, FilterConfig } from "@/components/data-table";
 import { Job, JobStatus } from "@/types/job";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { IconFileText, IconClock, IconCheck, IconX, IconAlertCircle } from "@tabler/icons-react";
-import { getJobs } from "@/actions/jobs";
+import { IconFileText, IconClock, IconCheck, IconX, IconAlertCircle, IconTrash } from "@tabler/icons-react";
+import { getJobs, cancelJob } from "@/actions/jobs";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Helper function to format date
 function formatDate(dateString: string | null): string {
@@ -95,7 +106,99 @@ function calculateProgress(processed: number, total: number): number {
   return Math.round((processed / total) * 100);
 }
 
-export const columns: ColumnDef<Job>[] = [
+// Cancel Job Button Component
+function CancelJobButton({
+  job,
+  isCanceling,
+  onCancel,
+  open,
+  onOpenChange,
+}: {
+  job: Job;
+  isCanceling: boolean;
+  onCancel: (jobId: number) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const handleConfirmCancel = () => {
+    onCancel(job.job_id);
+    onOpenChange(false);
+  };
+
+  return (
+    <div className="flex justify-center">
+      <Button
+        variant="destructive"
+        size="sm"
+        disabled={isCanceling}
+        className="h-7 px-3 text-xs"
+        onClick={() => onOpenChange(true)}
+      >
+        {isCanceling ? (
+          <>
+            <IconClock className="h-3 w-3 mr-1 animate-spin" />
+            Canceling...
+          </>
+        ) : (
+          <>
+            <IconTrash className="h-3 w-3 mr-1" />
+            Cancel Import
+          </>
+        )}
+      </Button>
+
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Import?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this import? This action cannot be undone.
+              <br />
+              <br />
+              <strong>Job ID:</strong> {job.job_id}
+              <br />
+              <strong>Filename:</strong> {job.job_original_filename}
+              <br />
+              <strong>Status:</strong> {formatStatus(job.job_status)}
+              <br />
+              <br />
+              This will permanently delete the job, all related staging records, issues, and the CSV file from S3.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCanceling}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={isCanceling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCanceling ? (
+                <>
+                  <IconClock className="h-4 w-4 mr-2 animate-spin" />
+                  Canceling...
+                </>
+              ) : (
+                <>
+                  <IconTrash className="h-4 w-4 mr-2" />
+                  Cancel Import
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// Create columns with actions (with closure for cancel handler)
+function createColumns(
+  cancelingJobId: number | null,
+  onCancel: (jobId: number) => void,
+  openDialogJobId: number | null,
+  onOpenChange: (jobId: number | null) => void
+): ColumnDef<Job>[] {
+  return [
   {
     accessorKey: "job_id",
     header: "ID",
@@ -219,7 +322,32 @@ export const columns: ColumnDef<Job>[] = [
       return <div className="font-mono text-sm text-center">{row.getValue("job_user_id")}</div>;
     },
   },
-];
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => {
+      const job = row.original;
+      const status = job.job_status;
+      const canCancel = status === "PENDING" || status === "NEEDS_REVIEW" || status === "FAILED";
+      const isCanceling = cancelingJobId === job.job_id;
+
+      if (!canCancel) {
+        return <div className="text-center"><span className="text-muted-foreground text-sm">-</span></div>;
+      }
+
+      return (
+        <CancelJobButton
+          job={job}
+          isCanceling={isCanceling}
+          onCancel={onCancel}
+          open={openDialogJobId === job.job_id}
+          onOpenChange={(open) => onOpenChange(open ? job.job_id : null)}
+        />
+      );
+    },
+  },
+  ];
+}
 
 const filterConfigs: FilterConfig[] = [
   {
@@ -268,7 +396,11 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [isPolling, setIsPolling] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [cancelingJobId, setCancelingJobId] = useState<number | null>(null);
+  const [openDialogJobId, setOpenDialogJobId] = useState<number | null>(null);
   const errorCountRef = useRef(0);
+  
+  const isDialogOpen = openDialogJobId !== null;
 
   const fetchJobsData = useCallback(async () => {
     try {
@@ -307,7 +439,8 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
     // Set up polling interval
     let intervalId: NodeJS.Timeout | null = null;
 
-    if (isPolling) {
+    // Only poll if not paused and not in dialog
+    if (isPolling && !isDialogOpen) {
       intervalId = setInterval(() => {
         fetchJobsData();
       }, POLLING_INTERVAL);
@@ -319,7 +452,7 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
         clearInterval(intervalId);
       }
     };
-  }, [isPolling, fetchJobsData]);
+  }, [isPolling, isDialogOpen, fetchJobsData]);
 
   // Check if there are any jobs with status that might change (PENDING, PROCESSING)
   const hasActiveJobs = jobs.some(
@@ -332,6 +465,30 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
       setIsPolling(true);
     }
   }, [hasActiveJobs, isPolling]);
+
+  const handleCancelJob = async (jobId: number) => {
+    setCancelingJobId(jobId);
+    try {
+      await cancelJob(jobId);
+      toast.success("Job cancelled successfully", {
+        description: `Job ${jobId} has been cancelled and deleted.`,
+        duration: 3000,
+      });
+      // Refresh jobs list after successful cancellation
+      await fetchJobsData();
+    } catch (error) {
+      console.error("Error cancelling job:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to cancel job";
+      toast.error("Error cancelling job", { description: errorMessage });
+    } finally {
+      setCancelingJobId(null);
+    }
+  };
+
+  const columns = useMemo(
+    () => createColumns(cancelingJobId, handleCancelJob, openDialogJobId, setOpenDialogJobId),
+    [cancelingJobId, openDialogJobId]
+  );
 
   return (
     <div className="space-y-4">
@@ -348,6 +505,7 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
           "job_total_rows",
           "job_processed_rows",
           "job_issue_count",
+          "actions",
           "job_created_at",
           "duration",
         ]}

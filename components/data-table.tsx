@@ -300,17 +300,40 @@ function SortableHeader({
 
 function DraggableRow<TData>({ 
   row, 
-  rowClickUrl 
+  rowClickUrl,
+  onRowClick
 }: { 
   row: Row<TData>;
   rowClickUrl?: string;
+  onRowClick?: (row: Row<TData>) => void;
 }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
     id: row.id,
   });
   const router = useRouter();
 
-  const handleRowClick = () => {
+  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+    // Se o clique foi em um botão, link ou elemento interativo, não fazer nada
+    const target = e.target as HTMLElement;
+    
+    if (
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'A' ||
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]') ||
+      target.closest('[data-radix-collection-item]') // Radix UI components
+    ) {
+      return;
+    }
+
+    // Se tem callback, usar callback
+    if (onRowClick) {
+      onRowClick(row);
+      return;
+    }
+    
+    // Caso contrário, usar rowClickUrl se fornecido
     if (!rowClickUrl) return;
     
     // Busca dinamicamente o campo que contém 'id' no nome
@@ -325,6 +348,8 @@ function DraggableRow<TData>({
     }
   };
 
+  const isClickable = onRowClick || rowClickUrl;
+
   return (
     <TableRow
       data-state={row.getIsSelected() && "selected"}
@@ -334,8 +359,8 @@ function DraggableRow<TData>({
         transform: CSS.Transform.toString(transform),
         transition: transition,
       }}
-      className={rowClickUrl ? "cursor-pointer hover:bg-muted/50" : ""}
-      onClick={handleRowClick}
+      className={isClickable ? "cursor-pointer hover:bg-muted/50" : ""}
+      onClick={isClickable ? handleRowClick : undefined}
     >
       {row.getVisibleCells().map((cell) => {
         const cellValue = cell.getValue();
@@ -369,9 +394,11 @@ export interface DataTableProps<TData> {
   data: TData[];
   initialVisibleColumns?: string[];
   rowClickUrl?: string; // URL base para redirecionamento ao clicar na linha
+  onRowClick?: (row: Row<TData>) => void; // Callback para quando a linha é clicada
   searchFields?: string[]; // Campos para pesquisa global
   searchPlaceholder?: string; // Placeholder personalizado para a barra de pesquisa
   filters?: FilterConfig[]; // Configuração dos filtros avançados
+  meta?: Record<string, any>; // Meta data to pass to table options
 }
 
 export function DataTable<TData>({ 
@@ -379,9 +406,11 @@ export function DataTable<TData>({
   data, 
   initialVisibleColumns,
   rowClickUrl,
+  onRowClick,
   searchFields = [],
   searchPlaceholder = "Pesquisar...",
-  filters = []
+  filters = [],
+  meta
 }: DataTableProps<TData>) {
   const [tableData, setTableData] = React.useState(data);
   
@@ -586,6 +615,7 @@ export function DataTable<TData>({
   const table = useReactTable({
     data: filteredData,
     columns: enhancedColumns,
+    meta,
     state: {
       sorting,
       columnVisibility,
@@ -893,7 +923,7 @@ export function DataTable<TData>({
                   strategy={verticalListSortingStrategy}
                 >
                   {table.getRowModel().rows.map((row) => (
-                    <DraggableRow key={row.id} row={row} rowClickUrl={rowClickUrl} />
+                    <DraggableRow key={row.id} row={row} rowClickUrl={rowClickUrl} onRowClick={onRowClick} />
                   ))}
                 </SortableContext>
               ) : (

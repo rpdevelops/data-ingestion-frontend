@@ -171,7 +171,7 @@ export function UploadCSVModal({ open, onOpenChange }: UploadCSVModalProps) {
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="sm:max-w-[540px] flex flex-col">
+      <SheetContent className="sm:max-w-[540px] flex flex-col p-4">
         <SheetHeader>
           <SheetTitle>Upload CSV File</SheetTitle>
           <SheetDescription>
@@ -179,7 +179,7 @@ export function UploadCSVModal({ open, onOpenChange }: UploadCSVModalProps) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto space-y-2 py-2">
           {/* File Drop Zone */}
           <div
             onDragEnter={handleDragEnter}

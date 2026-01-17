@@ -15,7 +15,7 @@ function getFriendlyErrorMessage(status: number, originalMessage: string): strin
     case 401:
       return "Authentication failed. Please log in again.";
     case 403:
-      return "You don't have permission to upload files. Please contact an administrator.";
+      return "You don't have permission to upload or cancel jobs. Please contact an administrator.";
     case 404:
       return "Upload endpoint not found. Please contact support.";
     case 409:
@@ -193,4 +193,145 @@ export async function uploadCSV(formData: FormData): Promise<UploadResponse> {
 
   const data = await response.json();
   return data;
+}
+
+export interface ReprocessJobResponse {
+  job_id: number;
+  message: string;
+  s3_key: string;
+}
+
+/**
+ * Server Action to reprocess a job
+ * Sends the job to reprocessing queue
+ */
+export async function reprocessJob(jobId: number): Promise<ReprocessJobResponse> {
+  const idToken = await getIdToken();
+
+  if (!idToken) {
+    throw new Error("No authentication token available. Please log in.");
+  }
+
+  const response = await fetch(`${API_URL}/jobs/${jobId}/reprocess`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${idToken}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Failed to reprocess job: ${response.status} ${response.statusText}`;
+    
+    // Read the response body only once
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType?.includes("application/json");
+    
+    try {
+      if (isJson) {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else {
+        const errorText = await response.text();
+        if (errorText && errorText.trim()) {
+          errorMessage = errorText;
+        }
+      }
+    } catch (parseError) {
+      // If we can't parse the error, use the default message
+      console.error("Error parsing error response:", parseError);
+    }
+    
+    // Create a user-friendly error message
+    const friendlyMessage = getFriendlyErrorMessage(response.status, errorMessage);
+    throw new Error(friendlyMessage);
+  }
+
+  const data = await response.json();
+
+  // Validate response structure
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid response format from API");
+  }
+
+  return {
+    job_id: data.job_id,
+    message: data.message || `Job ${jobId} queued for reprocessing`,
+    s3_key: data.s3_key || "",
+  };
+}
+
+export interface CancelJobResponse {
+  job_id: number;
+  message: string;
+}
+
+/**
+ * Server Action to cancel a job
+ * Only allowed for jobs with status PENDING, NEEDS_REVIEW, or FAILED
+ * Requires "editor" group in Cognito
+ */
+export async function cancelJob(jobId: number): Promise<CancelJobResponse> {
+  const idToken = await getIdToken();
+
+  if (!idToken) {
+    throw new Error("No authentication token available. Please log in.");
+  }
+
+  const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${idToken}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Failed to cancel job: ${response.status} ${response.statusText}`;
+    
+    // Read the response body only once
+    const contentType = response.headers.get("content-type");
+    const isJson = contentType?.includes("application/json");
+    
+    try {
+      if (isJson) {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } else {
+        const errorText = await response.text();
+        if (errorText && errorText.trim()) {
+          errorMessage = errorText;
+        }
+      }
+    } catch (parseError) {
+      // If we can't parse the error, use the default message
+      console.error("Error parsing error response:", parseError);
+    }
+    
+    // Create a user-friendly error message
+    const friendlyMessage = getFriendlyErrorMessage(response.status, errorMessage);
+    throw new Error(friendlyMessage);
+  }
+
+  const data = await response.json();
+
+  // Validate response structure
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid response format from API");
+  }
+
+  return {
+    job_id: data.job_id || jobId,
+    message: data.message || `Job ${jobId} cancelled successfully`,
+  };
 }
