@@ -376,13 +376,7 @@ const filterConfigs: FilterConfig[] = [
     type: "text",
     label: "Filename",
     placeholder: "Search by filename...",
-  },
-  {
-    field: "job_user_id",
-    type: "text",
-    label: "User ID",
-    placeholder: "Search by user ID...",
-  },
+  }
 ];
 
 interface JobsComponentProps {

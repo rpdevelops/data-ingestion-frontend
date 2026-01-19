@@ -544,11 +544,28 @@ export function DataTable<TData>({
           // Converter data da célula para Date
           let cellDate: Date | null = null;
           try {
-            // Tentar parsear data no formato DD/MM/YYYY
-            if (cellValueStr && cellValueStr !== '-' && cellValueStr !== '') {
-              const [day, month, year] = cellValueStr.split('/');
-              if (day && month && year) {
-                cellDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            // O cellValue pode ser uma string ISO (valor original) ou string formatada
+            const rawValue = cellValue as string;
+            
+            if (rawValue && rawValue !== '-' && rawValue !== '') {
+              // Primeiro tentar parsear como ISO string (valor original)
+              if (rawValue.includes('T') || rawValue.includes('Z') || rawValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+                cellDate = new Date(rawValue);
+              } 
+              // Tentar parsear como MM/DD/YYYY (formato formatado)
+              else if (rawValue.includes('/')) {
+                const parts = rawValue.split(' ')[0].split('/'); // Remove hora se houver
+                if (parts.length === 3) {
+                  const [month, day, year] = parts.map(Number);
+                  if (month && day && year) {
+                    cellDate = new Date(year, month - 1, day);
+                  }
+                }
+              }
+              
+              // Se ainda não conseguiu, tentar new Date direto
+              if (!cellDate || isNaN(cellDate.getTime())) {
+                cellDate = new Date(rawValue);
               }
             }
           } catch {
@@ -793,7 +810,7 @@ export function DataTable<TData>({
                        className="text-muted-foreground hover:text-foreground"
                      >
                        <IconFilterOff className="h-4 w-4 mr-1" />
-                       Limpar Filtros
+                       Clear Filters
                      </Button>
                    </div>
                   )}
@@ -943,11 +960,11 @@ export function DataTable<TData>({
       <div className="flex items-center justify-between px-4">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
           {table.getFilteredSelectedRowModel().rows.length} de{" "}
-          {table.getFilteredRowModel().rows.length} Linha(s) selecionada(s).
+          {table.getFilteredRowModel().rows.length} Line(s) selected.
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Linhas por página</p>
+            <p className="text-sm font-medium">Lines per page</p>
             <Select
               value={table.getState().pagination.pageSize === table.getFilteredRowModel().rows.length ? "all" : `${table.getState().pagination.pageSize}`}
               onValueChange={(value: string) => {

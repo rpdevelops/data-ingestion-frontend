@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { IconAlertCircle, IconCheck, IconX, IconMail, IconFileAlert, IconUserPlus, IconHash, IconRefresh } from "@tabler/icons-react";
 import { getIssues, getIssuesByJobId } from "@/actions/issues";
-import { reprocessJob } from "@/actions/jobs";
+import { reprocessJob, getJobs } from "@/actions/jobs";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ResolveIssueModal } from "./resolve-issue-modal";
@@ -267,6 +267,7 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [hasPendingJobs, setHasPendingJobs] = useState(false);
   const router = useRouter();
 
   const fetchIssuesData = useCallback(async () => {
@@ -374,32 +375,60 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
   };
 
   const handleReprocessAllJobs = async () => {
-    // Extract unique job IDs from all resolved issues
-    const uniqueJobIds = Array.from(
-      new Set(
-        issues
-          .filter(issue => issue.issue_resolved)
-          .map(issue => issue.issues_job_id)
-      )
-    );
-
-    if (uniqueJobIds.length === 0) {
-      toast.error("No jobs to reprocess", {
-        description: "No resolved issues found with associated jobs.",
-      });
-      return;
-    }
-
     setIsReprocessing(true);
-    const totalJobs = uniqueJobIds.length;
-    let successCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
 
     try {
+      // Get all jobs to check their status
+      const jobsResponse = await getJobs();
+      
+      // Filter jobs with PENDING or NEEDS_REVIEW status
+      const pendingJobs = jobsResponse.jobs.filter(
+        job => job.job_status === 'PENDING' || job.job_status === 'NEEDS_REVIEW'
+      );
+
+      if (pendingJobs.length === 0) {
+        setIsReprocessing(false);
+        toast.info("No jobs to reprocess", {
+          description: "No jobs with PENDING or NEEDS_REVIEW status found.",
+        });
+        return;
+      }
+
+      // Group issues by job_id
+      const issuesByJobId = new Map<number, Issue[]>();
+      issues.forEach(issue => {
+        const jobId = issue.issues_job_id;
+        if (!issuesByJobId.has(jobId)) {
+          issuesByJobId.set(jobId, []);
+        }
+        issuesByJobId.get(jobId)!.push(issue);
+      });
+
+      // Filter jobs that have all issues resolved (issue_count === 0 or all issues are resolved)
+      const jobsToReprocess = pendingJobs.filter(job => {
+        const jobIssues = issuesByJobId.get(job.job_id) || [];
+        // If job has no issues or all issues are resolved
+        return job.job_issue_count === 0 || jobIssues.every(issue => issue.issue_resolved);
+      });
+
+      if (jobsToReprocess.length === 0) {
+        setIsReprocessing(false);
+        toast.info("No jobs ready for reprocessing", {
+          description: "All pending jobs still have unresolved issues.",
+        });
+        return;
+      }
+
+      const jobIdsToReprocess = jobsToReprocess.map(job => job.job_id);
+
+      const totalJobs = jobIdsToReprocess.length;
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
       // Process jobs sequentially to avoid overwhelming the API
-      for (let i = 0; i < uniqueJobIds.length; i++) {
-        const jobId = uniqueJobIds[i];
+      for (let i = 0; i < jobIdsToReprocess.length; i++) {
+        const jobId = jobIdsToReprocess[i];
         try {
           await reprocessJob(jobId);
           successCount++;
@@ -444,8 +473,58 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     }
   };
 
+  // Check if there are jobs with status PENDING or NEEDS_REVIEW that have all issues resolved
+  useEffect(() => {
+    const checkPendingJobs = async () => {
+      // Only check if not viewing a specific job's issues and all issues are resolved
+      if (jobId || stats.unresolved > 0) {
+        setHasPendingJobs(false);
+        return;
+      }
+
+      try {
+        const jobsResponse = await getJobs();
+        
+        // Group issues by job_id
+        const issuesByJobId = new Map<number, Issue[]>();
+        issues.forEach(issue => {
+          const jobId = issue.issues_job_id;
+          if (!issuesByJobId.has(jobId)) {
+            issuesByJobId.set(jobId, []);
+          }
+          issuesByJobId.get(jobId)!.push(issue);
+        });
+
+        // Check if there are jobs with PENDING or NEEDS_REVIEW that have all issues resolved
+        const hasPending = jobsResponse.jobs.some(job => {
+          const isPendingOrNeedsReview = job.job_status === 'PENDING' || job.job_status === 'NEEDS_REVIEW';
+          if (!isPendingOrNeedsReview) return false;
+          
+          const jobIssues = issuesByJobId.get(job.job_id) || [];
+          // Job has no issues or all issues are resolved
+          return job.job_issue_count === 0 || jobIssues.every(issue => issue.issue_resolved);
+        });
+        
+        setHasPendingJobs(hasPending);
+      } catch (error) {
+        console.error("Error checking pending jobs:", error);
+        setHasPendingJobs(false);
+      }
+    };
+
+    // Check when all issues are resolved
+    if (stats.total > 0 && stats.unresolved === 0) {
+      checkPendingJobs();
+    } else {
+      setHasPendingJobs(false);
+    }
+  }, [stats.total, stats.unresolved, jobId, issues]);
+
   // Check if all issues are resolved
   const allIssuesResolved = stats.total > 0 && stats.unresolved === 0 && stats.resolved === stats.total;
+  
+  // Show reprocess button only if all issues are resolved AND there are pending jobs
+  const showReprocessAllButton = allIssuesResolved && hasPendingJobs && !jobId;
 
   return (
     <div className="space-y-4">
@@ -465,8 +544,8 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         </div>
       </div>
 
-      {/* Reprocess Button - Only show when all issues are resolved */}
-      {allIssuesResolved && (
+      {/* Reprocess Button - Only show when all issues are resolved and (for all issues page) there are pending jobs */}
+      {allIssuesResolved && (jobId || showReprocessAllButton) && (
         <div className="flex justify-center">
           {jobId ? (
             // Single job reprocess button
