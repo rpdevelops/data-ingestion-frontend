@@ -135,6 +135,22 @@ export function ResolveIssueModal({ open, onOpenChange, issueId, onResolved }: R
     } catch (error) {
       console.error("Error loading issue details:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to load issue details";
+      
+      // Check for authentication errors
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        onOpenChange(false);
+        setLoading(false);
+        return;
+      }
+      
       toast.error("Error loading issue", { description: errorMessage });
       onOpenChange(false);
     } finally {
@@ -344,6 +360,22 @@ export function ResolveIssueModal({ open, onOpenChange, issueId, onResolved }: R
     } catch (error) {
       console.error("Error resolving issue:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to resolve issue";
+      
+      // Check for authentication errors
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        onOpenChange(false);
+        setSubmitting(false);
+        return;
+      }
+      
       toast.error("Error resolving issue", { description: errorMessage });
     } finally {
       setSubmitting(false);

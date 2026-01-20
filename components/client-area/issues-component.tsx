@@ -12,6 +12,7 @@ import { reprocessJob, getJobs } from "@/actions/jobs";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ResolveIssueModal } from "./resolve-issue-modal";
+import { ViewIssueModal } from "./view-issue-modal";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
@@ -207,6 +208,27 @@ export const columns: ColumnDef<Issue>[] = [
       );
     },
   },
+  {
+    accessorKey: "issue_resolution_comment",
+    header: "Resolution Comment",
+    cell: ({ row }) => {
+      const comment = row.getValue("issue_resolution_comment") as string | null;
+      return (
+        <div className="text-center max-w-[400px]">
+          {comment ? (
+            <span 
+              className="truncate block" 
+              title={comment}
+            >
+              {comment}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </div>
+      );
+    },
+  },
 ];
 
 const filterConfigs: FilterConfig[] = [
@@ -265,7 +287,9 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
   });
   const errorCountRef = useRef(0);
   const [selectedIssueId, setSelectedIssueId] = useState<number | null>(null);
+  const [viewIssueId, setViewIssueId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [hasPendingJobs, setHasPendingJobs] = useState(false);
   const router = useRouter();
@@ -288,16 +312,29 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
       }
     } catch (error) {
       console.error("Error fetching issues during polling:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load issues";
+      
+      // If authentication error and can't refresh, stop polling and redirect
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        setIsPolling(false);
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        return;
+      }
+      
       errorCountRef.current += 1;
       const currentErrorCount = errorCountRef.current;
       
       // Only show toast on first error or every 5 errors to avoid spam
       if (currentErrorCount === 1 || currentErrorCount % 5 === 0) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to load issues";
         toast.error("Failed to refresh issues", {
-          description: errorMessage.includes("Authentication") 
-            ? "Please refresh the page and log in again."
-            : "The table will continue trying to refresh automatically.",
+          description: "The table will continue trying to refresh automatically.",
           duration: 4000,
         });
       }
@@ -337,10 +374,14 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
 
   const handleRowClick = (row: any) => {
     const issue = row.original as Issue;
-    // Only open modal if issue is not resolved
+    
+    // Always open view modal to show all details
+    setViewIssueId(issue.issue_id);
+    setIsViewModalOpen(true);
+    
+    // If issue is unresolved and has affected rows, also prepare resolve modal
     if (!issue.issue_resolved && issue.affected_rows && issue.affected_rows.length > 0) {
       setSelectedIssueId(issue.issue_id);
-      setIsModalOpen(true);
     }
   };
 
@@ -349,6 +390,16 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     setSelectedIssueId(null);
     // Refresh issues after resolving
     fetchIssuesData();
+  };
+
+  const handleViewModalClose = () => {
+    setIsViewModalOpen(false);
+    setViewIssueId(null);
+  };
+
+  const handleOpenResolveModal = (issueId: number) => {
+    setSelectedIssueId(issueId);
+    setIsModalOpen(true);
   };
 
   const handleReprocess = async () => {
@@ -369,6 +420,21 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     } catch (error) {
       console.error("Error reprocessing job:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to reprocess job";
+      
+      // Check for authentication errors
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        setIsReprocessing(false);
+        return;
+      }
+      
       toast.error("Error reprocessing job", { description: errorMessage });
       setIsReprocessing(false);
     }
@@ -439,6 +505,21 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         } catch (error) {
           errorCount++;
           const errorMessage = error instanceof Error ? error.message : `Failed to reprocess job ${jobId}`;
+          
+          // Check for authentication errors - stop processing and redirect
+          if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+            setIsReprocessing(false);
+            toast.error("Session expired", {
+              description: "Please log in again to continue.",
+              duration: 5000,
+            });
+            // Redirect to login after a delay
+            setTimeout(() => {
+              window.location.href = "/auth/login";
+            }, 2000);
+            return;
+          }
+          
           errors.push(`Job ${jobId}: ${errorMessage}`);
           toast.error(`Error reprocessing job ${jobId}`, {
             description: errorMessage,
@@ -467,6 +548,21 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     } catch (error) {
       console.error("Error during batch reprocessing:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to reprocess jobs";
+      
+      // Check for authentication errors
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        setIsReprocessing(false);
+        return;
+      }
+      
       toast.error("Error reprocessing jobs", { description: errorMessage });
     } finally {
       setIsReprocessing(false);
@@ -508,6 +604,15 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         setHasPendingJobs(hasPending);
       } catch (error) {
         console.error("Error checking pending jobs:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to check pending jobs";
+        
+        // Check for authentication errors - silently fail here as this is a background check
+        if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+          // Don't show toast for background checks, but stop the check
+          setHasPendingJobs(false);
+          return;
+        }
+        
         setHasPendingJobs(false);
       }
     };
@@ -595,8 +700,8 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
       <DataTable
         columns={columns}
         data={issues}
-        searchFields={["issue_description", "issue_resolved_by", "issues_job_id"]}
-        searchPlaceholder="Search issues by description, resolved by, or job ID..."
+        searchFields={["issue_description", "issue_resolved_by", "issue_resolution_comment", "issues_job_id"]}
+        searchPlaceholder="Search issues by description, resolved by, resolution comment, or job ID..."
         filters={filterConfigs.filter(filter => jobId ? filter.field !== "issues_job_id" : true)}
         onRowClick={handleRowClick}
         initialVisibleColumns={
@@ -608,8 +713,8 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
                 "issue_description",
                 "affected_rows_count",
                 "issue_created_at",
-                "issue_resolved_at",
-                "issue_resolved_by"
+                "issue_resolved_at"
+          
               ]
             : [
                 "issue_id",
@@ -624,7 +729,17 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
         }
       />
 
-      {/* Resolve Issue Modal */}
+      {/* View Issue Modal (Informative) */}
+      {viewIssueId && (
+        <ViewIssueModal
+          open={isViewModalOpen}
+          onOpenChange={setIsViewModalOpen}
+          issueId={viewIssueId}
+          onResolve={handleOpenResolveModal}
+        />
+      )}
+
+      {/* Resolve Issue Modal (Only for unresolved issues) */}
       {selectedIssueId && (
         <ResolveIssueModal
           open={isModalOpen}

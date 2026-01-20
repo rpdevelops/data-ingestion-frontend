@@ -408,21 +408,34 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
       }
     } catch (error) {
       console.error("Error fetching jobs during polling:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load jobs";
+      
+      // If authentication error and can't refresh, stop polling and redirect
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        setIsPolling(false);
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        return;
+      }
+      
       errorCountRef.current += 1;
       const currentErrorCount = errorCountRef.current;
       
       // Only show toast on first error or every 5 errors to avoid spam
       if (currentErrorCount === 1 || currentErrorCount % 5 === 0) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to load jobs";
         toast.error("Failed to refresh jobs", {
-          description: errorMessage.includes("Authentication") 
-            ? "Please refresh the page and log in again."
-            : "The table will continue trying to refresh automatically.",
+          description: "The table will continue trying to refresh automatically.",
           duration: 4000,
         });
       }
       
-      // Don't stop polling on error, just log it
+      // Don't stop polling on other errors, just log it
     }
   }, []);
 
@@ -473,6 +486,21 @@ export function JobsComponent({ initialJobs = [] }: JobsComponentProps) {
     } catch (error) {
       console.error("Error cancelling job:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to cancel job";
+      
+      // Check for authentication errors
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        setCancelingJobId(null);
+        return;
+      }
+      
       toast.error("Error cancelling job", { description: errorMessage });
     } finally {
       setCancelingJobId(null);

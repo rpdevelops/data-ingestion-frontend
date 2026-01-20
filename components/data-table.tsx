@@ -226,9 +226,9 @@ function generateFilterOptions(data: unknown[], field: string): { value: string;
     .filter((val, index, arr) => arr.indexOf(val) === index) // Remove duplicatas
     .sort();
   
-  // Adicionar opção "Selecionar" no início para desativar o filtro
+  
   return [
-    { value: '__SELECT_ALL__', label: 'Selecionar' },
+    { value: '__SELECT_ALL__', label: 'Select' },
     ...values.map(value => ({
       value,
       label: value
@@ -747,7 +747,7 @@ export function DataTable<TData>({
                    const filterOptions = filter.dynamicOptions 
                      ? generateFilterOptions(data, filter.field)
                      : [
-                         { value: '__SELECT_ALL__', label: 'Selecionar' },
+                         { value: '__SELECT_ALL__', label: 'Select' },
                          ...(filter.options || [])
                        ];
                    
@@ -779,20 +779,20 @@ export function DataTable<TData>({
                            endValue={filterValues[filter.dateRangeFields.end]}
                            onStartChange={(value) => handleFilterChange(filter.dateRangeFields!.start, value)}
                            onEndChange={(value) => handleFilterChange(filter.dateRangeFields!.end, value)}
-                         startPlaceholder="Data início"
-                         endPlaceholder="Data fim"
+                         startPlaceholder="Start Date"
+                         endPlaceholder="End Date"
                        />
                      ) : filter.type === 'date' ? (
                        <DatePicker
                          value={filterValues[filter.field]}
                          onChange={(value) => handleFilterChange(filter.field, value)}
-                         placeholder={`Selecionar ${filter.label.toLowerCase()}`}
+                         placeholder={`Select ${filter.label.toLowerCase()}`}
                          className="w-40"
                        />
                      ) : (
                        <Input
                          id={`filter-${filter.field}`}
-                         placeholder={filter.placeholder || `Filtrar por ${filter.label.toLowerCase()}`}
+                         placeholder={filter.placeholder || `Filter by ${filter.label.toLowerCase()}`}
                          value={filterValues[filter.field] || ''}
                          onChange={(e) => handleFilterChange(filter.field, e.target.value)}
                          className="w-40"
@@ -843,7 +843,7 @@ export function DataTable<TData>({
                 </div>
                 {globalFilter && (
                   <div className="text-sm text-muted-foreground whitespace-nowrap">
-                    {table.getFilteredRowModel().rows.length} resultado(s) encontrado(s)
+                    {table.getFilteredRowModel().rows.length} result(s) found
                   </div>
                 )}
               </div>
@@ -858,7 +858,7 @@ export function DataTable<TData>({
                     <Button variant="outline" size="sm">
                       <IconLayoutColumns />
                       <span className="hidden lg:inline">Customize Columns</span>
-                      <span className="lg:hidden">Colunas</span>
+                      <span className="lg:hidden">Columns</span>
                       <IconChevronDown />
                     </Button>
                   </DropdownMenuTrigger>

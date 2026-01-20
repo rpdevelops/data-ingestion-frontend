@@ -1,6 +1,6 @@
 "use server";
 
-import { getIdToken } from "@/lib/auth/cognito";
+import { getIdTokenWithRefresh } from "@/actions/auth";
 import { Issue, StagingRow, StagingStatus } from "@/types/issue";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -54,7 +54,7 @@ export async function updateStaging(
   stagingId: number,
   updateData: UpdateStagingRequest
 ): Promise<StagingUpdateResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");

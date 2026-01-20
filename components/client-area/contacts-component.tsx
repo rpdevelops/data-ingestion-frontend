@@ -138,16 +138,29 @@ export function ContactsComponent({ initialContacts = [] }: ContactsComponentPro
       }
     } catch (error) {
       console.error("Error fetching contacts:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load contacts";
+      
+      // If authentication error and can't refresh, stop polling and redirect
+      if (errorMessage.includes("Authentication") || errorMessage.includes("401") || errorMessage.includes("No authentication token")) {
+        setIsPolling(false);
+        toast.error("Session expired", {
+          description: "Please log in again to continue.",
+          duration: 5000,
+        });
+        // Redirect to login after a delay
+        setTimeout(() => {
+          window.location.href = "/auth/login";
+        }, 2000);
+        return;
+      }
+      
       errorCountRef.current += 1;
       const currentErrorCount = errorCountRef.current;
       
       // Only show toast on first error or every 5 errors to avoid spam
       if (currentErrorCount === 1 || currentErrorCount % 5 === 0) {
-        const errorMessage = error instanceof Error ? error.message : "Failed to load contacts";
         toast.error("Failed to refresh contacts", {
-          description: errorMessage.includes("Authentication") 
-            ? "Please refresh the page and log in again."
-            : "The table will continue trying to refresh automatically.",
+          description: "The table will continue trying to refresh automatically.",
           duration: 4000,
         });
       }

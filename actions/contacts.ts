@@ -1,6 +1,6 @@
 "use server";
 
-import { getIdToken } from "@/lib/auth/cognito";
+import { getIdTokenWithRefresh } from "@/actions/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -46,7 +46,7 @@ export interface ContactResponse {
  * Server Action to fetch contact by email from the backend API
  */
 export async function getContactByEmail(email: string): Promise<Contact | null> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -126,7 +126,7 @@ export async function getContactByEmail(email: string): Promise<Contact | null> 
  * Server Action to fetch all contacts from the backend API
  */
 export async function getAllContacts(): Promise<ContactResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");

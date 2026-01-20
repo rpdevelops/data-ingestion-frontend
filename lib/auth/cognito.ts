@@ -312,6 +312,8 @@ export async function clearAuthCookies() {
 
 /**
  * Get access token from cookies
+ * Note: This function only reads the token - it does NOT refresh expired tokens
+ * Token refresh should be handled in Server Actions before making API calls
  */
 export async function getAccessToken(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -319,8 +321,42 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Get refresh token from cookies
+ */
+export async function getRefreshToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get("cognito_refresh_token")?.value || null;
+}
+
+/**
+ * Check if token is expired or will expire soon (within 5 minutes)
+ */
+export function isTokenExpiredOrExpiringSoon(token: string): boolean {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString()
+    );
+    
+    if (!payload.exp) {
+      return true; // If no expiration, assume expired
+    }
+
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    const currentTime = Date.now();
+    const fiveMinutesInMs = 5 * 60 * 1000;
+    
+    // Token is expired or will expire within 5 minutes
+    return expirationTime <= (currentTime + fiveMinutesInMs);
+  } catch {
+    return true; // If we can't parse, assume expired
+  }
+}
+
+/**
  * Get ID token from cookies
  * The ID token contains the "aud" claim required by the backend
+ * Note: This function only reads the token - it does NOT refresh expired tokens
+ * Token refresh should be handled in Server Actions before making API calls
  */
 export async function getIdToken(): Promise<string | null> {
   const cookieStore = await cookies();

@@ -1,6 +1,6 @@
 "use server";
 
-import { getIdToken } from "@/lib/auth/cognito";
+import { getIdTokenWithRefresh } from "@/actions/auth";
 import { Issue, IssuesApiResponse } from "@/types/issue";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -32,7 +32,7 @@ function getFriendlyErrorMessage(status: number, originalMessage: string): strin
  * Can be used in both Server Components and Client Components
  */
 export async function getIssues(): Promise<IssuesApiResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -147,7 +147,7 @@ export async function updateIssue(
   issueId: number,
   updateData: UpdateIssueRequest
 ): Promise<IssueUpdateResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -234,7 +234,7 @@ export async function updateIssue(
  * Server Action to fetch issue details by ID from the backend API
  */
 export async function getIssueDetails(issueId: number): Promise<Issue> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -319,7 +319,7 @@ export async function getIssueDetails(issueId: number): Promise<Issue> {
  * Can be used in both Server Components and Client Components
  */
 export async function getIssuesByJobId(jobId: number): Promise<IssuesApiResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");

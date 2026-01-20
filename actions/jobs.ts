@@ -1,6 +1,6 @@
 "use server";
 
-import { getIdToken } from "@/lib/auth/cognito";
+import { getIdTokenWithRefresh } from "@/actions/auth";
 import { Job } from "@/types/job";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -50,7 +50,7 @@ export interface JobsApiResponse {
  * Can be used in both Server Components and Client Components
  */
 export async function getJobs(): Promise<JobsApiResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -133,7 +133,7 @@ export async function getJobs(): Promise<JobsApiResponse> {
  * Requires authentication via JWT token and "uploader" group
  */
 export async function uploadCSV(formData: FormData): Promise<UploadResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -206,7 +206,7 @@ export interface ReprocessJobResponse {
  * Sends the job to reprocessing queue
  */
 export async function reprocessJob(jobId: number): Promise<ReprocessJobResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");
@@ -277,7 +277,7 @@ export interface CancelJobResponse {
  * Requires "editor" group in Cognito
  */
 export async function cancelJob(jobId: number): Promise<CancelJobResponse> {
-  const idToken = await getIdToken();
+  const idToken = await getIdTokenWithRefresh();
 
   if (!idToken) {
     throw new Error("No authentication token available. Please log in.");

@@ -126,10 +126,22 @@ export function UploadCSVModal({ open, onOpenChange }: UploadCSVModalProps) {
       if (err instanceof Error) {
         errorDescription = err.message;
         
+        // Check for authentication errors
+        if (err.message.includes("Authentication") || err.message.includes("401") || err.message.includes("No authentication token")) {
+          toast.error("Session expired", {
+            description: "Please log in again to continue.",
+            duration: 5000,
+          });
+          // Redirect to login after a delay
+          setTimeout(() => {
+            window.location.href = "/auth/login";
+          }, 2000);
+          setIsUploading(false);
+          return;
+        }
+        
         // Provide more specific error titles based on error message
-        if (err.message.includes("Authentication")) {
-          errorTitle = "Authentication error";
-        } else if (err.message.includes("permission")) {
+        if (err.message.includes("permission")) {
           errorTitle = "Permission denied";
         } else if (err.message.includes("already been uploaded") || err.message.includes("duplicate")) {
           errorTitle = "File already exists";
