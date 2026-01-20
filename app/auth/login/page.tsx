@@ -1,15 +1,16 @@
 import { LoginForm } from "@/components/login-form";
 import Link from "next/link";
-import { Database } from "lucide-react";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: { error?: string; required?: string };
+  searchParams: Promise<{ error?: string; required?: string }>;
 }) {
+  const params = await searchParams;
+  
   const getErrorMessage = () => {
-    if (searchParams?.error === "unauthorized") {
-      const requiredGroup = searchParams?.required || "uploader";
+    if (params?.error === "unauthorized") {
+      const requiredGroup = params?.required || "uploader";
       return `You don't have permission to access this area. Required group: ${requiredGroup}. Please contact an administrator.`;
     }
     return null;

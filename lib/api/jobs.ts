@@ -56,19 +56,22 @@ export async function fetchJobs(): Promise<JobsApiResponse> {
 
   // Transform the response to match our Job type
   // The API returns datetime objects that are serialized as ISO strings
-  const jobs: Job[] = data.jobs.map((job: any) => ({
-    job_id: job.job_id,
-    job_created_at: job.job_created_at,
-    job_user_id: job.job_user_id,
-    job_original_filename: job.job_original_filename,
-    job_s3_object_key: job.job_s3_object_key,
-    job_status: job.job_status,
-    job_total_rows: job.job_total_rows,
-    job_processed_rows: job.job_processed_rows,
-    job_issue_count: job.job_issue_count,
-    job_process_start: job.job_process_start || null,
-    job_process_end: job.job_process_end || null,
-  }));
+  const jobs: Job[] = data.jobs.map((job: unknown) => {
+    const jobData = job as Record<string, unknown>;
+    return {
+      job_id: jobData.job_id as number,
+      job_created_at: jobData.job_created_at as string,
+      job_user_id: jobData.job_user_id as string,
+      job_original_filename: jobData.job_original_filename as string,
+      job_s3_object_key: jobData.job_s3_object_key as string,
+      job_status: jobData.job_status as string,
+      job_total_rows: jobData.job_total_rows as number,
+      job_processed_rows: jobData.job_processed_rows as number,
+      job_issue_count: jobData.job_issue_count as number,
+      job_process_start: (jobData.job_process_start as string | null) || null,
+      job_process_end: (jobData.job_process_end as string | null) || null,
+    };
+  });
 
   return {
     jobs,

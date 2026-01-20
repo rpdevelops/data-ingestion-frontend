@@ -84,34 +84,35 @@ export async function signIn(email: string, password: string) {
       refreshToken: response.AuthenticationResult.RefreshToken,
       expiresIn: response.AuthenticationResult.ExpiresIn,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle specific Cognito errors
-    if (error.name === "NotAuthorizedException") {
+    const cognitoError = error as { name?: string; message?: string };
+    if (cognitoError.name === "NotAuthorizedException") {
       throw new Error("Invalid email or password");
     }
-    if (error.name === "UserNotConfirmedException") {
+    if (cognitoError.name === "UserNotConfirmedException") {
       throw new Error("User account is not confirmed. Please verify your email address.");
     }
-    if (error.name === "UserNotFoundException") {
+    if (cognitoError.name === "UserNotFoundException") {
       throw new Error("User not found. Please check your email address.");
     }
-    if (error.name === "InvalidParameterException") {
+    if (cognitoError.name === "InvalidParameterException") {
       throw new Error(
         "Invalid authentication parameters. " +
         "Please ensure ALLOW_USER_PASSWORD_AUTH is enabled in your Cognito App Client."
       );
     }
-    if (error.name === "InvalidPasswordException") {
+    if (cognitoError.name === "InvalidPasswordException") {
       throw new Error("Password does not meet the requirements.");
     }
     
     // If it's already our custom error message, re-throw it
-    if (error.message && error.message.includes("NEW_PASSWORD_REQUIRED")) {
+    if (cognitoError.message && cognitoError.message.includes("NEW_PASSWORD_REQUIRED")) {
       throw error;
     }
     
     // Generic error
-    throw new Error(error.message || "Authentication failed. Please check your credentials and Cognito configuration.");
+    throw new Error(cognitoError.message || "Authentication failed. Please check your credentials and Cognito configuration.");
   }
 }
 
@@ -130,8 +131,9 @@ export async function signOut(accessToken: string) {
 
     await cognitoClient.send(command);
     return { success: true };
-  } catch (error: any) {
-    throw new Error(error.message || "Sign out failed");
+  } catch (error: unknown) {
+    const cognitoError = error as { message?: string };
+    throw new Error(cognitoError.message || "Sign out failed");
   }
 }
 
@@ -176,7 +178,8 @@ export async function getCurrentUser() {
     // Groups appear as 'cognito:groups' in the access token
     // Note: This is different from IAM roles (which are for AWS resource access)
     // IAM roles are used by backend services, not for user authorization
-    const groups = (payload as any)['cognito:groups'] || [];
+    const payloadWithGroups = payload as { 'cognito:groups'?: string[] };
+    const groups = payloadWithGroups['cognito:groups'] || [];
     const roles = groups; // Groups are used as roles/authorization in Cognito
 
     // Decode ID token to get user information

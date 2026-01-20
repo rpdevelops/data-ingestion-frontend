@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import { DataTable, FilterConfig } from "@/components/data-table";
 import { Issue, IssueType } from "@/types/issue";
 import { Badge } from "@/components/ui/badge";
@@ -372,8 +372,8 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     }
   }, [hasUnresolvedIssues, isPolling]);
 
-  const handleRowClick = (row: any) => {
-    const issue = row.original as Issue;
+  const handleRowClick = (row: Row<Issue>) => {
+    const issue = row.original;
     
     // Always open view modal to show all details
     setViewIssueId(issue.issue_id);
@@ -392,10 +392,6 @@ export function IssuesComponent({ initialIssues = [], jobId }: IssuesComponentPr
     fetchIssuesData();
   };
 
-  const handleViewModalClose = () => {
-    setIsViewModalOpen(false);
-    setViewIssueId(null);
-  };
 
   const handleOpenResolveModal = (issueId: number) => {
     setSelectedIssueId(issueId);

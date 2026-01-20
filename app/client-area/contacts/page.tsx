@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/cognito";
 import { redirect } from "next/navigation";
 import { ContactsComponent } from "@/components/client-area/contacts-component";
-import { getAllContacts } from "@/actions/contacts";
+import { getAllContacts, Contact } from "@/actions/contacts";
 
 export default async function ContactsPage() {
   const user = await getCurrentUser();
@@ -11,7 +11,7 @@ export default async function ContactsPage() {
   }
 
   // Fetch contacts using Server Action
-  let contacts = [];
+  let contacts: Contact[] = [];
   let error: string | null = null;
 
   try {

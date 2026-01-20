@@ -12,5 +12,11 @@ export function createAdminClient() {
         },
       },
     },
-  } as any
+  } as {
+    auth: {
+      admin: {
+        updateUserById: () => Promise<{ error: { message: string } }>;
+      };
+    };
+  }
 } 

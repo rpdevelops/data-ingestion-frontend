@@ -398,7 +398,7 @@ export interface DataTableProps<TData> {
   searchFields?: string[]; // Campos para pesquisa global
   searchPlaceholder?: string; // Placeholder personalizado para a barra de pesquisa
   filters?: FilterConfig[]; // Configuração dos filtros avançados
-  meta?: Record<string, any>; // Meta data to pass to table options
+  meta?: Record<string, unknown>; // Meta data to pass to table options
 }
 
 export function DataTable<TData>({ 

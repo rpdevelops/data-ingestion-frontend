@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth/cognito";
 import { redirect } from "next/navigation";
 import { IssuesComponent } from "@/components/client-area/issues-component";
 import { getIssues } from "@/actions/issues";
+import { Issue } from "@/types/issue";
 
 export default async function IssuesPage() {
   const user = await getCurrentUser();
@@ -11,7 +12,7 @@ export default async function IssuesPage() {
   }
 
   // Fetch issues from backend API using Server Action
-  let issues = [];
+  let issues: Issue[] = [];
   let error: string | null = null;
 
   try {

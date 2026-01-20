@@ -1,11 +1,7 @@
 // TODO: Replace with AWS Cognito authentication
 // This is a temporary placeholder to allow the app to start
-import { cookies } from 'next/headers'
-
 export async function createClient() {
   // Placeholder - will be replaced with Cognito client
-  const cookieStore = await cookies()
-  
   return {
     auth: {
       getUser: async () => {
@@ -20,7 +16,23 @@ export async function createClient() {
         // TODO: Implement Cognito sign out
         return { error: null }
       },
+      resetPasswordForEmail: async () => {
+        // TODO: Implement Cognito password reset
+        return { error: { message: 'Not implemented - Cognito migration in progress' } }
+      },
+      updateUser: async () => {
+        // TODO: Implement Cognito user update
+        return { error: { message: 'Not implemented - Cognito migration in progress' } }
+      },
     },
     // Add other Supabase methods as needed for compatibility
-  } as any
+  } as {
+    auth: {
+      getUser: () => Promise<{ data: { user: null }; error: null }>;
+      signInWithPassword: () => Promise<{ data: { user: null }; error: { message: string } }>;
+      signOut: () => Promise<{ error: null }>;
+      resetPasswordForEmail: (email: string, options?: { redirectTo?: string }) => Promise<{ error: { message: string } | null }>;
+      updateUser: (updates: { password?: string }) => Promise<{ error: { message: string } | null }>;
+    };
+  }
 }
