@@ -1,77 +1,66 @@
-# Data Ingestion Tool
+# Data Ingestion Frontend
 
-> Data ingestion and processing platform with human-in-the-loop validation
+Next.js 15 web application for the Data Ingestion Tool.
 
-## 📑 Table of Contents
+> **Main Documentation**: See [data-ingestion-tool](https://github.com/rpdevelops/data-ingestion-tool) for architecture overview and system flow.
 
-- [Overview](#overview)
-- [Architecture and Technologies](#architecture-and-technologies)
-- [Project Structure](#project-structure)
-- [Running Locally](#running-locally)
-- [Contributing](#contributing)
-- [License](#license)
+**Live Application**: [https://app.rpdevelops.online](https://app.rpdevelops.online)
 
 ---
 
-## Overview
+## Quick Start
 
-The Data Ingestion Tool is a data ingestion and processing platform developed with Next.js 15 and AWS Cognito. The system allows CSV file uploads, asynchronous processing, data validation, and issue resolution through a web interface.
+### Prerequisites
+
+- Node.js 18+
+- pnpm
+- AWS Cognito User Pool configured
+
+### Run Locally
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Access: [http://localhost:3000](http://localhost:3000)
+
+### Docker
+
+```bash
+docker build -t data-ingestion-frontend .
+docker run -p 3000:3000 --env-file .env data-ingestion-frontend
+```
 
 ---
 
-## Architecture and Technologies
+## Environment Variables
 
-### **Frontend**
-- **Framework**: Next.js 15 (App Router)
-- **UI Components**: ShadcnUI + Radix UI
-- **Styling**: TailwindCSS
-- **Authentication**: AWS Cognito
-- **Forms**: React Hook Form + Zod validation
-- **Icons**: Tabler Icons
-- **Notifications**: Sonner (toast notifications)
+```bash
+# AWS Cognito
+COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
+COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+COGNITO_REGION=us-east-1
+ALLOWED_GROUP=uploader
 
-### **Backend**
-- **Runtime**: FastAPI (Python)
-- **Database**: PostgreSQL (RDS)
-- **Authentication**: AWS Cognito JWT
-- **Storage**: Amazon S3
-- **Queue**: Amazon SQS
-- **Infrastructure**: ECS Fargate
-
-### **Architecture Pattern**
-The project follows the **SSR + Actions + API** pattern:
-
-```
-┌─────────────┐
-│   Page.tsx  │ ← Server-Side Rendering (SSR)
-│   (SSR)     │
-└──────┬──────┘
-       │
-       ↓
-┌─────────────┐
-│  Actions    │ ← Server Actions (Business Logic)
-│  *.ts       │
-└──────┬──────┘
-       │
-       ↓
-┌─────────────┐
-│  Backend    │ ← FastAPI (Python)
-│  API        │
-└──────┬──────┘
-       │
-       ↓
-┌─────────────┐
-│  Database   │ ← PostgreSQL (RDS)
-│  PostgreSQL │
-└─────────────┘
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-**Benefits**:
-- ✅ Clear separation of concerns
-- ✅ Code reusability
-- ✅ Easy testing
-- ✅ Maintainability
-- ✅ Performance (SSR)
+---
+
+## Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Framework | Next.js 15 (App Router) |
+| UI Components | ShadcnUI + Radix UI |
+| Styling | TailwindCSS |
+| Forms | React Hook Form + Zod |
+| Icons | Tabler Icons |
+| Notifications | Sonner |
+| Auth | AWS Cognito |
 
 ---
 
@@ -79,113 +68,136 @@ The project follows the **SSR + Actions + API** pattern:
 
 ```
 data-ingestion-frontend/
-├── app/                    # App Router (Next.js 15)
-│   ├── api/               # API Routes
-│   ├── client-area/       # Client area (authenticated)
-│   ├── auth/              # Authentication pages
-│   └── page.tsx           # Landing page
-├── components/            # React components
-│   ├── ui/                # UI components (ShadcnUI)
-│   └── client-area/       # Client area components
-├── actions/               # Server Actions
-├── lib/                   # Utilities and configurations
-│   ├── auth/              # Cognito authentication
-│   └── supabase/          # Legacy Supabase (to be removed)
-├── scripts/               # Utility scripts
-└── docs/                  # Documentation
+├── app/                      # Next.js App Router
+│   ├── api/                  # API routes
+│   ├── auth/                 # Login, callback pages
+│   ├── client-area/          # Protected pages
+│   │   ├── processing-jobs/  # Jobs overview and Upload CSV
+│   │   ├── jobs/             # Job details
+│   │   ├── issues/           # Issue resolution
+│   │   ├── contacts/         # Contact list
+│   └── page.tsx              # Landing page
+├── components/
+│   ├── ui/                   # ShadcnUI components
+│   └── client-area/          # Feature components
+├── actions/                  # Server Actions
+├── lib/
+│   ├── auth/                 # Cognito integration
+│   └── api/                  # API client
+└── types/                    # TypeScript definitions
 ```
 
 ---
 
-## Running Locally
+## Available Scripts
 
-### **Prerequisites**
-- Node.js 18+ 
-- pnpm
-- AWS Cognito User Pool configured
-
-### **Setup**
-
-1. **Clone the repository**:
-   ```bash
-   git clone [repository-url]
-   cd data-ingestion-frontend
-   ```
-
-2. **Configure environment variables**:
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   Configure in `.env.local`:
-   ```env
-   # AWS Cognito (required)
-   COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
-   COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-   COGNITO_REGION=us-east-1
-   
-   # Authorization (optional - defaults to "uploader")
-   ALLOWED_GROUP=uploader
-   
-   # API Configuration
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   pnpm install
-   ```
-
-4. **Create a Cognito user**:
-   ```bash
-   pnpm create-user email@example.com "Password123!"
-   ```
-
-5. **Run the project**:
-   ```bash
-   pnpm dev
-   ```
-
-6. **Access**: [localhost:3000](http://localhost:3000)
-
-### **Available Scripts**
 ```bash
-pnpm dev          # Development
+pnpm dev          # Development server
 pnpm build        # Production build
 pnpm start        # Production server
-pnpm lint         # Code linting
+pnpm lint         # ESLint
 pnpm create-user  # Create Cognito user
 ```
 
 ---
 
-## Contributing
+## Key Features
 
-### **Code Standards**
+### Authentication Flow
+
+1. User clicks login
+2. Redirect to Cognito hosted UI
+3. Cognito redirects back with code
+4. Exchange code for tokens
+5. Store tokens in secure cookies
+6. Middleware validates on protected routes
+
+### CSV Upload
+
+1. User selects CSV file
+2. Client-side preview
+3. Submit to backend API
+4. Display job status and progress
+
+### Issue Resolution
+
+1. View issues list with filters
+2. See conflicting rows side-by-side
+3. Select winner / discard losers
+4. Trigger reprocessing
+
+### Real-time Updates
+
+- Polling for job status changes
+- Toast notifications for actions
+- Progress indicators during processing
+
+---
+
+## Architectural Decision Records (ADRs)
+
+
+### ADR-001: Server Actions Pattern
+
+**Decision**: Use Server Actions for API calls.
+
+**Rationale**:
+- Type-safe server-side execution
+- Automatic error handling
+- Token injection without client exposure
+- Progressive enhancement
+
+---
+
+### ADR-002: ShadcnUI Components
+
+**Decision**: Use ShadcnUI over other component libraries.
+
+**Rationale**:
+- Full control over components (not npm dependency)
+- Built on Radix UI (accessibility)
+- TailwindCSS styling
+- Easy customization
+
+---
+
+### ADR-003: Polling over WebSocket
+
+**Decision**: Use polling for job status updates.
+
+**Rationale**:
+- Simpler implementation
+- No persistent connections
+- Adequate for use case
+- WebSocket planned for future
+
+---
+
+### ADR-004: Cookie-based Token Storage
+
+**Decision**: Store Cognito tokens in HTTP-only cookies.
+
+**Rationale**:
+- Protected from XSS
+- Automatic inclusion in requests
+- Secure flag for HTTPS
+- Middleware validation
+
+---
+
+## Code Standards
+
 - TypeScript strict mode
 - ESLint + Prettier
 - Conventional Commits
 - Functional components with hooks
 - Server Actions for data operations
 
-### **Commit Structure**
-```
-feat: new feature
-fix: bug fix
-docs: documentation
-style: code formatting
-refactor: refactoring
-test: tests
-chore: maintenance tasks
-```
-
 ---
 
-## License
+## Related Repositories
 
-This project is a proprietary portfolio.
-
----
-
-**Developed by Robson Paradella Rocha**
+- [data-ingestion-tool](https://github.com/rpdevelops/data-ingestion-tool) - Main documentation
+- [data-ingestion-backend](https://github.com/rpdevelops/data-ingestion-backend) - FastAPI API
+- [data-ingestion-worker](https://github.com/rpdevelops/data-ingestion-worker) - Async processor
+- [data-ingestion-infra](https://github.com/rpdevelops/data-ingestion-infra) - Terraform IaC
